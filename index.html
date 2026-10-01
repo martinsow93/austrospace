@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Expertensuche – K.I. Stammtisch</title>
+<style>
+  /* ---------- Grundlagen & Design-Tokens ---------- */
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --border: #DCD9D2;
+    --text: #1E2230;
+    --text-soft: #5B5F6E;
+    --accent: #3B5BA5;
+    --accent-soft: #E7ECF6;
+    --tag: #C77B3B;
+    --tag-soft: #FBEEE2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  h1, h2, h3, .name {
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  }
+
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+  }
+
+  header p {
+    margin: 6px 0 0;
+    color: var(--text-soft);
+    font-size: 14px;
+  }
+
+  /* ---------- Layout: 3 Spalten ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr 340px;
+    min-height: calc(100vh - 90px);
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ---------- Sidebar (Themenfilter) ---------- */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 20px 16px;
+  }
+
+  .sidebar h2 {
+    font-size: 13px;
+    text-transform: none;
+    color: var(--text-soft);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  .topic-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .topic-btn:hover {
+    background: var(--accent-soft);
+  }
+
+  .topic-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  /* ---------- Mitte (Suchfeld + Ergebnisliste) ---------- */
+  .main {
+    padding: 20px 24px;
+    border-right: 1px solid var(--border);
+  }
+
+  .search-box {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    background: var(--surface);
+  }
+
+  .search-box:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .result-count {
+    font-size: 13px;
+    color: var(--text-soft);
+    margin-bottom: 12px;
+  }
+
+  .person-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    cursor: pointer;
+  }
+
+  .person-card:hover {
+    border-color: var(--accent);
+  }
+
+  .person-card.selected {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .person-card .name {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .person-card .meta {
+    font-size: 13px;
+    color: var(--text-soft);
+  }
+
+  .tags {
+    margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag {
+    background: var(--tag-soft);
+    color: var(--tag);
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  /* ---------- Detailbereich (rechts) ---------- */
+  .detail {
+    padding: 20px 24px;
+  }
+
+  .detail-empty {
+    color: var(--text-soft);
+    font-size: 14px;
+    margin-top: 40px;
+    text-align: center;
+  }
+
+  .detail h2.name {
+    font-size: 22px;
+    margin: 0 0 4px;
+  }
+
+  .detail .position {
+    color: var(--text-soft);
+    font-size: 14px;
+    margin-bottom: 18px;
+  }
+
+  .detail-field {
+    margin-bottom: 16px;
+  }
+
+  .detail-field .label {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-bottom: 4px;
+  }
+
+  .detail-field .value {
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-line;
+  }
+
+  .contact-btn {
+    display: inline-block;
+    margin-top: 8px;
+    background: var(--accent);
+    color: white;
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .contact-btn:hover {
+    opacity: 0.9;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Expertensuche</h1>
+  <p>K.I. Stammtisch – Kompetenzmatrix</p>
+</header>
+
+<div class="layout">
+
+  <!-- Sidebar: Themenfilter -->
+  <aside class="sidebar">
+    <h2>Themenbereich</h2>
+    <div id="topic-list"></div>
+  </aside>
+
+  <!-- Mitte: Suchfeld + Ergebnisliste -->
+  <main class="main">
+    <input
+      id="search"
+      class="search-box"
+      type="text"
+      placeholder="Suche in 'Erfahrungen mit…' …"
+    />
+    <div class="result-count" id="result-count"></div>
+    <div id="person-list"></div>
+  </main>
+
+  <!-- Rechts: Detailbereich -->
+  <section class="detail" id="detail">
+    <div class="detail-empty">Wähle links eine Person aus, um Details zu sehen.</div>
+  </section>
+
+</div>
+
+<script>
+  /* ---------- Daten ----------
+     In diesem Prototyp sind die Daten fest im Code hinterlegt (fiktive
+     Testdaten). In einer späteren Ausbaustufe werden diese Daten aus
+     einer echten Datenquelle geladen. */
+  const personen = [
+    {
+      name: "Person 1",
+      kontakt: "person1@beispiel.at",
+      themen: ["Prompting", "LLMs", "Datenanalyse"],
+      erfahrungsgrad: "Einsteiger",
+      erfahrungen:
+        "- Erste Erfahrungen mit dem Formulieren von Prompts für Sprachmodelle.\n" +
+        "- Einfache Auswertungen von Tabellen mit Unterstützung von KI-Tools.\n" +
+        "- Interesse an Grundlagen der Datenanalyse mit KI.",
+      position: "Fachbereich A"
+    },
+    {
+      name: "Person 2",
+      kontakt: "person2@beispiel.at",
+      themen: ["Prozessautomatisierung", "Chatbots", "Coding"],
+      erfahrungsgrad: "Fortgeschritten",
+      erfahrungen:
+        "- Aufbau einfacher Automatisierungsabläufe für wiederkehrende Aufgaben.\n" +
+        "- Einrichtung eines Chatbots für interne Standardanfragen.\n" +
+        "- Grundkenntnisse im Schreiben kleiner Skripte zur Prozessunterstützung.",
+      position: "Fachbereich B"
+    },
+    {
+      name: "Person 3",
+      kontakt: "person3@beispiel.at",
+      themen: ["KI-Governance & Datenschutz", "Mediengenerierung", "Copilot & Microsoft 365"],
+      erfahrungsgrad: "Experte",
+      erfahrungen:
+        "- Erarbeitung interner Richtlinien zum Umgang mit KI-Tools.\n" +
+        "- Erstellung von Bild- und Textinhalten mit generativen KI-Werkzeugen.\n" +
+        "- Schulung von Kolleg:innen im Umgang mit Microsoft-365-KI-Funktionen.",
+      position: "Fachbereich C"
+    }
+  ];
+
+  /* ---------- Zustand ---------- */
+  let ausgewaehltesThema = "Alle";
+  let suchbegriff = "";
+  let ausgewaehltePerson = null;
+
+  /* ---------- Sidebar: Themenliste aufbauen ---------- */
+  function alleThemen() {
+    const set = new Set();
+    personen.forEach(p => p.themen.forEach(t => set.add(t)));
+    return ["Alle", ...Array.from(set).sort()];
+  }
+
+  function renderSidebar() {
+    const container = document.getElementById("topic-list");
+    container.innerHTML = "";
+    alleThemen().forEach(thema => {
+      const btn = document.createElement("button");
+      btn.className = "topic-btn" + (thema === ausgewaehltesThema ? " active" : "");
+      btn.textContent = thema;
+      btn.onclick = () => {
+        ausgewaehltesThema = thema;
+        suchbegriff = "";
+        document.getElementById("search").value = "";
+        render();
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  /* ---------- Filterlogik ----------
+     Regel aus der Funktionsbeschreibung: Sobald ein Suchbegriff
+     eingegeben wird, überschreibt die Suche den Themenfilter und
+     durchsucht alle Themenbereiche gleichzeitig. */
+  function gefiltertePersonen() {
+    if (suchbegriff.trim() !== "") {
+      const s = suchbegriff.toLowerCase();
+      return personen.filter(p => p.erfahrungen.toLowerCase().includes(s));
+    }
+    if (ausgewaehltesThema === "Alle") {
+      return personen;
+    }
+    return personen.filter(p => p.themen.includes(ausgewaehltesThema));
+  }
+
+  /* ---------- Mitte: Ergebnisliste ---------- */
+  function renderListe() {
+    const liste = gefiltertePersonen();
+    document.getElementById("result-count").textContent =
+      liste.length + (liste.length === 1 ? " Treffer" : " Treffer");
+
+    const container = document.getElementById("person-list");
+    container.innerHTML = "";
+
+    if (liste.length === 0) {
+      container.innerHTML = '<div class="detail-empty">Keine Treffer für diese Auswahl.</div>';
+      return;
+    }
+
+    liste.forEach(p => {
+      const card = document.createElement("div");
+      card.className = "person-card" + (ausgewaehltePerson === p ? " selected" : "");
+      card.innerHTML = `
+        <div class="name">${p.name}</div>
+        <div class="meta">${p.position} · ${p.erfahrungsgrad}</div>
+        <div class="tags">
+          ${p.themen.map(t => `<span class="tag">${t}</span>`).join("")}
+        </div>
+      `;
+      card.onclick = () => {
+        ausgewaehltePerson = p;
+        render();
+      };
+      container.appendChild(card);
+    });
+  }
+
+  /* ---------- Rechts: Detailbereich ---------- */
+  function renderDetail() {
+    const container = document.getElementById("detail");
+    if (!ausgewaehltePerson) {
+      container.innerHTML = '<div class="detail-empty">Wähle links eine Person aus, um Details zu sehen.</div>';
+      return;
+    }
+    const p = ausgewaehltePerson;
+    container.innerHTML = `
+      <h2 class="name">${p.name}</h2>
+      <div class="position">${p.position}</div>
+
+      <div class="detail-field">
+        <div class="label">Themenbereich</div>
+        <div class="tags">
+          ${p.themen.map(t => `<span class="tag">${t}</span>`).join("")}
+        </div>
+      </div>
+
+      <div class="detail-field">
+        <div class="label">Erfahrungsgrad</div>
+        <div class="value">${p.erfahrungsgrad}</div>
+      </div>
+
+      <div class="detail-field">
+        <div class="label">Erfahrungen mit…</div>
+        <div class="value">${p.erfahrungen}</div>
+      </div>
+
+      <a class="contact-btn"
+         href="mailto:${p.kontakt}?subject=Anfrage über die Expertensuche">
+         Kontakt aufnehmen
+      </a>
+    `;
+  }
+
+  /* ---------- Zentrale Render-Funktion ---------- */
+  function render() {
+    renderSidebar();
+    renderListe();
+    renderDetail();
+  }
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    suchbegriff = e.target.value;
+    ausgewaehltesThema = "Alle";
+    render();
+  });
+
+  render();
+</script>
+
+</body>
+</html>
